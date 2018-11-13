@@ -8,6 +8,8 @@ import java.util.Arrays;
 
 import org.junit.Test;
 
+import pkgEnum.eGameDifficulty;
+
 public class SudokuTest {
 
 /*	private void PrintStars() {
@@ -123,6 +125,15 @@ public class SudokuTest {
 
 	}*/
 
+	@Test
+	public void Sudoku_Test3() {
+		eGameDifficulty medium= eGameDifficulty.MEDIUM;
+			try {
+				Sudoku s1 = new Sudoku(9, medium);
+			} catch (Exception e) {
+				fail("Test failed to build a Sudoku");
+		}
+	}
 
 	@Test
 	public void Sudoku_FullPuzzle_1()
@@ -137,6 +148,6 @@ public class SudokuTest {
 		}
 	}
 
-
+	
 
 }

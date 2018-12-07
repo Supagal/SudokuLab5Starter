@@ -32,6 +32,8 @@ import pkgHelper.PuzzleViolation;
  */
 public class Sudoku extends LatinSquare implements Serializable {
 
+	public static eGameDifficulty eGameDifficulty;
+
 	/**
 	 * 
 	 * iSize - the length of the width/height of the Sudoku puzzle.
@@ -55,17 +57,20 @@ public class Sudoku extends LatinSquare implements Serializable {
 	
 	//level is type eGameDifficulty
 	//visibility   type        name
-	private eGameDifficulty level;
+	private static eGameDifficulty level;
+	
+	private static int mistakes;
 	
 	private Sudoku() {
 		super();
-		level=eGameDifficulty.EASY;
+		this.eGameDifficulty = eGameDifficulty.EASY;
+		this.mistakes = 0;
 	}
 	
-	public Sudoku(int iSize, eGameDifficulty difficulty) throws Exception {
+	/*public Sudoku(int iSize, eGameDifficulty difficulty) throws Exception {
 		this(iSize);
 		level = difficulty;
-	}
+	}*/
 	
 	/**
 	 * Sudoku - for Lab #2... do the following:
@@ -82,6 +87,7 @@ public class Sudoku extends LatinSquare implements Serializable {
 	 */
 	public Sudoku(int iSize) throws Exception {
 
+		this();
 		this.iSize = iSize;
 
 		double SQRT = Math.sqrt(iSize);
@@ -95,9 +101,10 @@ public class Sudoku extends LatinSquare implements Serializable {
 		super.setLatinSquare(puzzle);
 
 		FillDiagonalRegions();
-		SetCells();		
+		SetCells();
 		fillRemaining(this.cells.get(Objects.hash(0, iSqrtSize)));
-		
+		RemoveCells();
+
 	}
 
 	/**
@@ -110,6 +117,13 @@ public class Sudoku extends LatinSquare implements Serializable {
 	 * @throws Exception will be thrown if the length of the puzzle do not have a
 	 *                   whole number square root
 	 */
+	public Sudoku(int iSize, eGameDifficulty eGD) throws Exception {
+		this(iSize);
+		this.eGameDifficulty = eGD;
+		RemoveCells();
+	}
+	
+
 	public Sudoku(int[][] puzzle) throws Exception {
 		super(puzzle);
 		this.iSize = puzzle.length;
@@ -134,6 +148,20 @@ public class Sudoku extends LatinSquare implements Serializable {
 		return iSize;
 	}
 
+	
+	public static int getMistakes() {
+		return mistakes;
+	}
+	
+	public static void updateMistakes() {
+		mistakes += 1;
+	}
+
+	public int getiSqrtSize() {
+		return iSqrtSize;
+	}
+
+	
 	
 	public static boolean isRegionBoundary(double dSize)
 	{
@@ -209,6 +237,10 @@ public class Sudoku extends LatinSquare implements Serializable {
 		Collections.addAll(hsUsedValues, Arrays.stream(this.getRegion(iCol, iRow)).boxed().toArray(Integer[]::new));
 
 		hsCellRange.removeAll(hsUsedValues);
+		if (this.getPuzzle()[iRow][iCol] != 0) {
+			hsCellRange.add(this.getPuzzle()[iRow][iCol]);
+		}
+
 		return hsCellRange;
 	}
 
@@ -426,6 +458,7 @@ public class Sudoku extends LatinSquare implements Serializable {
 	 * @return - returns 'true' if the proposed value is valid for the row and
 	 *         column
 	 */
+	
 	public boolean isValidValue(int iRow, int iCol, int iValue) {
 
 		if (doesElementExist(super.getRow(iRow), iValue)) {
@@ -439,6 +472,21 @@ public class Sudoku extends LatinSquare implements Serializable {
 		}
 
 		return true;
+	}
+	
+	public ArrayList<PuzzleViolation> FindViolations(int iRow, int iCol, int iValue) {
+		ArrayList<PuzzleViolation> PV = new ArrayList<PuzzleViolation>();
+		if (doesElementExist(super.getRow(iRow), iValue)) {
+			PV.add(new PuzzleViolation(ePuzzleViolation.DupRow, iRow));
+		}
+		if (doesElementExist(super.getColumn(iCol), iValue)) {
+			PV.add(new PuzzleViolation(ePuzzleViolation.DupCol, iCol));
+		}
+		if (doesElementExist(this.getRegion(iCol, iRow), iValue)) {
+			PV.add(new PuzzleViolation(ePuzzleViolation.DupRegion, this.getRegionNbr(iCol, iRow)));
+		}
+
+		return PV;
 	}
 
 	/**
@@ -476,6 +524,22 @@ public class Sudoku extends LatinSquare implements Serializable {
 			SetRegion(getRegionNbr(i, i));
 			ShuffleRegion(getRegionNbr(i, i));
 		}
+	}
+	
+	public static int getMaxMistakes() {
+		int mistakesDifficulty = 0;
+		if (eGameDifficulty ==  eGameDifficulty.EASY)
+			mistakesDifficulty = 5;
+		else if (eGameDifficulty ==  eGameDifficulty.MEDIUM)
+			mistakesDifficulty = 4;
+		else if (eGameDifficulty ==  eGameDifficulty.HARD)
+			mistakesDifficulty = 3;
+		return mistakesDifficulty;
+	}
+
+	
+	public static boolean isGameOver() {
+		return mistakes >= getMaxMistakes();
 	}
 
 	/**
@@ -642,6 +706,7 @@ public class Sudoku extends LatinSquare implements Serializable {
 			lstValidValues = new ArrayList<Integer>(hsValidValues);
 		}
 
+		
 		public void ShuffleValidValues() {
 			Collections.shuffle(lstValidValues);
 		}
@@ -724,7 +789,7 @@ public class Sudoku extends LatinSquare implements Serializable {
 		if (value==null) 
 			return false;
 		
-		if (value.getiDifficultyValue() >= this.level.getiDifficultyValue())
+		if (value.getiDifficulty() >= this.level.getiDifficulty())
 			return true;
 		
 		return false;
@@ -748,12 +813,87 @@ public class Sudoku extends LatinSquare implements Serializable {
 			index++;
 		}
 	}
-	
-	
+
+	public boolean bFirstRow(Cell c) {
+		if (c.getiRow() == 0)
+			return true;
+		else
+			return false;
 	}
 	
+	public boolean bFirstCol(Cell c) {
+		if (c.getiCol() == 0)
+			return true;
+		else
+			return false;
+	}
+
+	public boolean bFirstCell(Cell c) {
+
+		if ((bFirstRow(c)) && (bFirstCol(c)))
+			return true;
+		else
+			return false;
+	}
 	
+	public boolean bLastRow(Cell c) {
+		if (c.getiRow() + 1 == this.iSize)
+			return true;
+		else
+			return false;
+	}
 	
+	public boolean bLastCol(Cell c) {
+		if (c.getiCol() + 1 == this.iSize)
+			return true;
+		else
+			return false;
+	}
+
+	
+	public boolean bLastCell(Cell c) {
+		if ((bLastRow(c)) && (bLastCol(c)))
+
+			return true;
+		else
+			return false;
+	}
+	
+	public boolean bRegionRow(Cell c) {
+		if ((c.getiRow() + 1) % this.iSqrtSize == 0)
+
+			return true;
+		else
+			return false;
+	}
+	
+	public boolean bRegionCol(Cell c) {
+		if ((c.getiCol() + 1) % this.iSqrtSize == 0)
+			return true;
+		else
+			return false;
+	}
+
+	
+public void isSolved() {
+	boolean solved=true;
+	int puzzle[][] = getPuzzle();
+	
+	for(int i= 0; i<puzzle.length;i++) {
+		for(int j = 0; j<puzzle[i].length;j++)
+		if (puzzle[i][j]==0) {
+			solved=false;
+		}
+	}
+	
+	if (solved==true) {
+		System.out.println("Congrats you have solved the puzzle");
+	}
+	
+}
+
+
+}
 	
 	
 	
